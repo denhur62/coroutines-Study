@@ -151,6 +151,57 @@
 >}
 >```
 
+### coroutine context
+
+>코루틴은 항상 특정 문맥에서 실행된다. 
+>
+>이때 어떤 문맥에서 코루틴을 실행할지는 디스패처가 결정한다.
+>
+>```kotlin
+>fun main() = runBlocking<Unit> {
+>    val jobs = arrayListOf<Job>()
+>    jobs += launch(Dispatchers.Unconfined) { // main 스레드에서 작업
+>        println("Unconfined:\t\t ${Thread.currentThread().name}")
+>    }
+>    jobs += launch(coroutineContext) { // 부모의 문맥, 여기서는 runBlocking의 문맥
+>        println("coroutineContext:\t ${Thread.currentThread().name}")
+>    }
+>    jobs += launch(Dispatchers.Default) { // 디스패처의 기본값 1
+>        println("Default:\t\t ${Thread.currentThread().name}")
+>    }
+>    jobs += launch(Dispatchers.IO) { // 입출력 중심의 문맥 2
+>        println("IO:\t\t ${Thread.currentThread().name}")
+>    }
+>    jobs += launch { // 아무런 인자가 없을 때
+>        println("main runBlocking: ${Thread.currentThread().name}")
+>    }
+>    jobs += launch(newSingleThreadContext("MyThread")) { // 새 스레드를 생성함 3
+>        println("MyThread:\t\t ${Thread.currentThread().name}")
+>    }
+>    jobs.forEach { it.join() }
+>}
+>//
+>Unconfined:		 main
+>Default:		 DefaultDispatcher-worker-1
+>IO:		 DefaultDispatcher-worker-2
+>MyThread:		 MyThread
+>coroutineContext:	 main
+>main runBlocking: main
+>
+>```
+>
+>1) 기본문맥은 GlobalScope와 동일하게 공유된 백그라운드 스레드의 CommonPool에서 코루틴을 
+>
+>실행하도록 한다. 다시 말하면 스레드를 새로 생성하지 않고 기존에 있는 것을 사용한다.
+>
+>2) I/O 는 입출력 윛주의 동작을 하는 코드에 적합한 공유 풀이다. 소켓처리나 블로킹 동작이 많은 파일에 
+>
+>적합하다.
+>
+>3) 새 스레드를 생성하는 문맥인데 새 스레드를 만들기 때문에 비용이 많이 들고 더 이상 필요하지 않으면
+>
+>해체하거나 종료시켜야 한다. 
+
 ## Scope builder
 
 >만일 어떤 코루틴들을 위한 사용자 정의 스코프가 필요한 경우가 있다면 coroutineScope{ } 빌더를 이용할 수 있다. 
